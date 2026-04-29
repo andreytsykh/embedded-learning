@@ -1,12 +1,12 @@
 #include <Arduino.h>
-#include "blink.h"
+#include "knightRider.h"
 
 void setup()
 {
-    init();
+    initRider();
 }
 
 void loop()
 {
-    patternStrobe(400);
+    patternKnightRider();
 }
