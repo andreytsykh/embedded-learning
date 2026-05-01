@@ -105,5 +105,10 @@ bool buttonDoubleClicked(Button &btn)
 
 bool buttonLongPressed(Button &btn)
 {
-    return btn.longPressEvent;
+    if (btn.longPressEvent)
+    {
+        btn.longPressEvent = false;
+        return true;
+    }
+    return false;
 }

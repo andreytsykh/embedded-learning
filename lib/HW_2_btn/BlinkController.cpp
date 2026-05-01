@@ -9,12 +9,29 @@ void blinkInit(BlinkController &ctrl, Led *leds, size_t count)
   ctrl.minDelay = 100;
   ctrl.maxDelay = 1000;
   ctrl.step = 100;
+  ctrl.enabled = false;
 
   for (size_t i = 0; i < ctrl.count; i++)
   {
     pinMode(ctrl.leds[i].pin, OUTPUT);
     digitalWrite(ctrl.leds[i].pin, ctrl.leds[i].state);
   }
+}
+
+void blinkOff(BlinkController &ctrl) {
+  for (size_t i = 0; i < ctrl.count; i++) {
+    ctrl.leds[i].state = LOW;
+    digitalWrite(ctrl.leds[i].pin, ctrl.leds[i].state);
+  }
+}
+
+void blinkEnable(BlinkController &ctrl) {
+  ctrl.enabled = true;
+}
+
+void blinkDisable(BlinkController &ctrl) {
+  ctrl.enabled = false;
+  blinkOff(ctrl);
 }
 
 void delayWithBtnCheck(int waitTime, Button &extBtn, Button &bootBtn)
@@ -30,6 +47,11 @@ void delayWithBtnCheck(int waitTime, Button &extBtn, Button &bootBtn)
 
 void blinkUpdate(BlinkController &ctrl, Button &extBtn, Button &bootBtn)
 {
+  if (!ctrl.enabled) {
+    blinkOff(ctrl);
+    return;
+  }
+
   for (size_t i = 0; i < ctrl.count; i++)
   {
     ctrl.leds[i].state = !ctrl.leds[i].state;
