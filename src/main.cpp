@@ -24,21 +24,28 @@ void setup()
   blinkInit(blinkCtrl, leds, sizeof(leds) / sizeof(leds[0]));
 }
 
-void loop()
-{
+void loop() {
   updateButtonState(extBtn);
   updateButtonState(bootBtn);
 
-  if (buttonClicked(extBtn))
-  {
-    Serial.print("Faster!");
+  if (buttonLongPressed(bootBtn)) {
+    Serial.println("Blink ON");
+    blinkEnable(blinkCtrl);
+  }
+
+  if (buttonDoubleClicked(extBtn)) {
+    Serial.println("Blink OFF");
+    blinkDisable(blinkCtrl);
+  }
+  else if (buttonClicked(extBtn)) {
+    Serial.println("Faster");
     blinkFaster(blinkCtrl);
   }
 
-  if (buttonClicked(bootBtn))
-  {
-    Serial.print("Slower!");
+  if (buttonClicked(bootBtn)) {
+    Serial.println("Slower");
     blinkSlower(blinkCtrl);
   }
   blinkUpdate(blinkCtrl, extBtn, bootBtn);
 }
+
