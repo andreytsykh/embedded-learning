@@ -1,51 +1,41 @@
 #include <Arduino.h>
-#include "Button.h"
-#include "BlinkController.h"
 
-#define EXT_BUTTON_PIN 4
-#define BOOT_BUTTON_PIN 0
+#define BUTTON_PIN 4
 
-Button extBtn;
-Button bootBtn;
+volatile uint32_t edgeCounter = 0;
 
-Led leds[] = {
-    {3, LOW},
-    {8, LOW}};
+void IRAM_ATTR buttonISR() {
+  edgeCounter++;
+}
 
-BlinkController blinkCtrl;
-
-void setup()
-{
+void setup() {
   Serial.begin(115200);
 
-  buttonBegin(extBtn, EXT_BUTTON_PIN, true);    // HIGH = pressed
-  buttonBegin(bootBtn, BOOT_BUTTON_PIN, false); // LOW = pressed
-
-  blinkInit(blinkCtrl, leds, sizeof(leds) / sizeof(leds[0]));
+  pinMode(BUTTON_PIN, INPUT); // зовнішній pull-down
+  attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), buttonISR, RISING);
 }
 
 void loop() {
-  updateButtonState(extBtn);
-  updateButtonState(bootBtn);
+  static bool measuring = false;
+  static uint32_t startCount = 0;
+  static uint32_t lastSeenCount = 0;
+  static uint32_t lastEdgeTime = 0;
 
-  if (buttonLongPressed(bootBtn)) {
-    Serial.println("Blink ON");
-    blinkEnable(blinkCtrl);
-  }
+  uint32_t count = edgeCounter;
 
-  if (buttonDoubleClicked(extBtn)) {
-    Serial.println("Blink OFF");
-    blinkDisable(blinkCtrl);
-  }
-  else if (buttonClicked(extBtn)) {
-    Serial.println("Faster");
-    blinkFaster(blinkCtrl);
+  if (!measuring && count != lastSeenCount) {
+    measuring = true;
+    startCount = lastSeenCount;
+    lastEdgeTime = millis();
   }
 
-  if (buttonClicked(bootBtn)) {
-    Serial.println("Slower");
-    blinkSlower(blinkCtrl);
+  if (measuring && count != lastSeenCount) {
+    lastSeenCount = count;
+    lastEdgeTime = millis();
   }
-  blinkUpdate(blinkCtrl, extBtn, bootBtn);
+
+  if (measuring && digitalRead(BUTTON_PIN) == LOW && millis() - lastEdgeTime > 100) {
+    Serial.printf("One full press RISING3 edges: %lu\n", lastSeenCount - startCount);
+    measuring = false;
+  }
 }
-
