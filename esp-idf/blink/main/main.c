@@ -10,7 +10,6 @@
 #define BUTTON_GPIO GPIO_NUM_4
 
 static const char* TAG = "Button Interrupt";
-static const uint16_t DEBOUNCE = 50;
 
 static volatile uint8_t interrupted = 0;
 static uint32_t irq_count = 0;
@@ -18,11 +17,6 @@ static uint32_t irq_count = 0;
 static void IRAM_ATTR button_isr_handler(void *arg)
 {
     interrupted = 1;
-}
-
-static uint32_t millis(void)
-{
-    return (uint32_t)(0xFFFFFFFF & esp_timer_get_time() / 1000);
 }
 
 void app_main(void)
@@ -44,20 +38,35 @@ void app_main(void)
         NULL
     );
 
-    ESP_LOGI(TAG, "Started. GPIO=%d, interrupt=NEGEDGE", BUTTON_GPIO);
+    ESP_LOGI(TAG, "Started. GPIO=%d, interrupt=POSEDGE", BUTTON_GPIO);
     ESP_LOGI(TAG, "Initial level: %d", gpio_get_level(BUTTON_GPIO));
 
     uint32_t last_count = 0;
-    uint32_t last_time = 0;
 
     while (1) {
         if (interrupted) {
             interrupted = 0;
 
-            uint32_t now = millis();
-            if (now - last_time > DEBOUNCE) {
-                last_time = now;
+            vTaskDelay(pdMS_TO_TICKS(10));
+
+            int level = gpio_get_level(BUTTON_GPIO);
+
+            if (level == 1) {
                 irq_count++;
+
+                ESP_LOGI(TAG, "VALID PRESS #%d", irq_count);
+
+                /*
+                 * Чекаємо відпускання.
+                 * Поки кнопка утримується, нові interrupt не дадуть другої реакції.
+                 */
+                while (gpio_get_level(BUTTON_GPIO) == 1) {
+                    vTaskDelay(pdMS_TO_TICKS(10));
+                }
+
+                ESP_LOGI(TAG, "Button released");
+            } else {
+                ESP_LOGI(TAG, "Ignored event, level = 0");
             }
         }
 
