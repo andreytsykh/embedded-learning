@@ -5,19 +5,19 @@
 #include "freertos/task.h"
 #include "driver/gpio.h"
 #include "esp_log.h"
-#include "esp_timer.h"
 
 #define BUTTON_GPIO GPIO_NUM_4
+#define POLL_MS     10
+#define STABLE_COUNT 5  // скільки однакових читань підряд = стабільний стан
 
 static const char* TAG = "Button Interrupt";
 
-static volatile uint8_t interrupted = 0;
-static uint32_t irq_count = 0;
-
-static void IRAM_ATTR button_isr_handler(void *arg)
-{
-    interrupted = 1;
-}
+typedef enum {
+    BTN_IDLE,
+    BTN_PRESSING,
+    BTN_PRESSED,
+    BTN_RELEASING,
+} btn_state_t;
 
 void app_main(void)
 {
@@ -25,56 +25,64 @@ void app_main(void)
         .pin_bit_mask = (1ULL << BUTTON_GPIO),
         .mode = GPIO_MODE_INPUT,
         .pull_up_en = GPIO_PULLUP_DISABLE,
-        .pull_down_en = GPIO_PULLDOWN_DISABLE, // Кнопка має власний pull down резистор
-        .intr_type = GPIO_INTR_POSEDGE // Так як кнопка в стану спокою має 0 
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE
     };
 
     gpio_config(&button_config);
-    gpio_install_isr_service(0);
 
-    gpio_isr_handler_add(
-        BUTTON_GPIO,
-        button_isr_handler,
-        NULL
-    );
+    ESP_LOGI(TAG, "Started. GPIO=%d, polling=%dms", BUTTON_GPIO, POLL_MS);
 
-    ESP_LOGI(TAG, "Started. GPIO=%d, interrupt=POSEDGE", BUTTON_GPIO);
-    ESP_LOGI(TAG, "Initial level: %d", gpio_get_level(BUTTON_GPIO));
-
-    uint32_t last_count = 0;
+    btn_state_t state = BTN_IDLE;
+    uint8_t stable = 0;
+    uint32_t press_count = 0;
 
     while (1) {
-        if (interrupted) {
-            interrupted = 0;
+        int level = gpio_get_level(BUTTON_GPIO);
 
-            vTaskDelay(pdMS_TO_TICKS(10));
-
-            int level = gpio_get_level(BUTTON_GPIO);
-
-            if (level == 1) {
-                irq_count++;
-
-                ESP_LOGI(TAG, "VALID PRESS #%d", irq_count);
-
-                /*
-                 * Чекаємо відпускання.
-                 * Поки кнопка утримується, нові interrupt не дадуть другої реакції.
-                 */
-                while (gpio_get_level(BUTTON_GPIO) == 1) {
-                    vTaskDelay(pdMS_TO_TICKS(10));
+        switch (state) {
+            case BTN_IDLE:
+                if (level == 1) {
+                    state = BTN_PRESSING;
+                    stable = 0;
                 }
+                break;
 
-                ESP_LOGI(TAG, "Button released");
-            } else {
-                ESP_LOGI(TAG, "Ignored event, level = 0");
-            }
+            case BTN_PRESSING:
+                if (level == 1) {
+                    stable++;
+                    if (stable >= STABLE_COUNT) {
+                        state = BTN_PRESSED;
+                        press_count++;
+                        ESP_LOGI(TAG, "VALID PRESS #%lu", press_count);
+                    }
+                } else {
+                    state = BTN_IDLE;
+                    stable = 0;
+                }
+                break;
+
+            case BTN_PRESSED:
+                if (level == 0) {
+                    state = BTN_RELEASING;
+                    stable = 0;
+                }
+                break;
+
+            case BTN_RELEASING:
+                if (level == 0) {
+                    stable++;
+                    if (stable >= STABLE_COUNT) {
+                        state = BTN_IDLE;
+                        ESP_LOGI(TAG, "Button released");
+                    }
+                } else {
+                    state = BTN_PRESSED;
+                    stable = 0;
+                }
+                break;
         }
 
-        if (last_count != irq_count) {
-            last_count = irq_count;
-            ESP_LOGI(TAG, "Interrupt count: %lu", last_count);
-        }
-
-        vTaskDelay(pdMS_TO_TICKS(1));
+        vTaskDelay(pdMS_TO_TICKS(POLL_MS));
     }
 }
