@@ -1,2 +1,6 @@
 idf_component_register(SRCS
-                       INCLUDE_DIRS ".")
+                           "src/main.c"
+                           "src/traffic_light.c"
+                           "src/button.c" 
+                       INCLUDE_DIRS
+                           "include")
