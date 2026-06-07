@@ -1,0 +1,72 @@
+# Build folders
+
+build/
+cmake-build-*/
+out/
+
+# CMake
+
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+CTestTestfile.cmake
+Testing/
+
+# Ninja
+
+.ninja_deps
+.ninja_log
+build.ninja
+
+# VS Code
+
+.vscode/
+
+# CLion
+
+.idea/
+
+# Visual Studio
+
+.vs/
+
+# Generated binaries
+
+*.elf
+*.bin
+*.hex
+*.map
+*.list
+
+# Object files
+
+*.o
+*.obj
+*.d
+*.su
+
+# Libraries
+
+*.a
+*.lib
+
+# Debug files
+
+*.log
+
+# OS files
+
+.DS_Store
+Thumbs.db
+
+# STM32CubeIDE
+
+Debug/
+Release/
+
+# Optional: keep if generated locally
+
+# Remove this line if you want to commit it
+
+# compile_commands.json
