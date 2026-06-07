@@ -18,10 +18,10 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include <stdint.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "app.h"
 
 /* USER CODE END Includes */
 
@@ -43,11 +43,6 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
-volatile uint8_t active = 0;
-volatile uint8_t button_event = 0;
-volatile uint32_t last_button_time = 0;
-volatile uint32_t blink_speed = 1000;
 
 /* USER CODE END PV */
 
@@ -93,6 +88,7 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
+  setup();
 
   /* USER CODE END 2 */
 
@@ -100,21 +96,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    if (active)
-    {
-        if (blink_speed < 100)
-      {
-          HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
-          active = 0;
-          button_event = 0;
-          blink_speed = 1000;
-      }
-      else
-      {
-          HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-          HAL_Delay(blink_speed);
-      }
-    }
+    loop();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -204,22 +186,6 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-    if (GPIO_Pin == BTN_Pin)
-    {
-        uint32_t now = HAL_GetTick();
-
-        if (now - last_button_time >= 50)
-        {
-            last_button_time = now;
-            button_event++;
-            blink_speed /= button_event;
-            active = 1;
-        }
-    }
-}
 
 /* USER CODE END 4 */
 
