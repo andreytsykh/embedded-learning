@@ -1,2 +1,22 @@
-idf_component_register(SRCS
-                       INCLUDE_DIRS ".")
+idf_component_register(
+    SRCS
+        "src/main.c"
+        "src/button.c"
+        "src/buzzer.c"
+        "src/display.c"
+        "src/encoder.c"
+        "src/melodies.c"
+        "src/safe.c"
+        "src/safe_callbacks.c"
+        "src/safe_indication.c"
+        "src/stm_link.c"
+    INCLUDE_DIRS
+        "include"
+    REQUIRES
+        esp_driver_gpio
+        esp_driver_ledc
+        esp_driver_i2c
+        esp_driver_pcnt
+        esp_driver_spi
+        esp_timer
+)

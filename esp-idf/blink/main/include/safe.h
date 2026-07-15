@@ -31,5 +31,6 @@ void         safe_init(const safe_config_t *config);
 void         safe_process_event(safe_event_t event);
 safe_state_t safe_get_state(void);
 uint8_t      safe_get_attempts_used(void);
+uint8_t      safe_get_attempts_remaining(void);
 
 #endif

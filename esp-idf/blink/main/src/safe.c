@@ -46,7 +46,7 @@ static void restart_input_indication(void)
 {
     safe_indication_off();
     safe_indication_on();
-    safe_indication_blink_led(ctx.digit_index);
+    // safe_indication_blink_led(ctx.digit_index);
 
     if (ctx.on_digit_changed) {
         ctx.on_digit_changed(ctx.digit_index, ctx.current_digit);
@@ -74,6 +74,10 @@ static void on_failed_attempt(const char *reason)
              reason, ctx.attempts_used, SAFE_MAX_ATTEMPTS);
 
     if (ctx.attempts_used >= SAFE_MAX_ATTEMPTS) {
+        if (ctx.on_digit_changed) {
+            ctx.on_digit_changed(ctx.digit_index, ctx.current_digit);
+        }
+
         ctx.state = SAFE_STATE_LOCKED;
         ESP_LOGE(TAG, "ACCESS BLOCKED");
         safe_lock_action();
@@ -132,7 +136,11 @@ void safe_init(const safe_config_t *config)
     reset_input();
     // safe_lock_action();
     ESP_LOGI(TAG, "Safe initialised — enter PIN");
-    safe_indication_blink_led(ctx.digit_index);
+    // safe_indication_blink_led(ctx.digit_index);
+
+    if (ctx.on_digit_changed) {
+        ctx.on_digit_changed(ctx.digit_index, ctx.current_digit);
+    }
 }
 
 void safe_process_event(safe_event_t event)
@@ -151,3 +159,7 @@ void safe_process_event(safe_event_t event)
 
 safe_state_t safe_get_state(void)         { return ctx.state; }
 uint8_t      safe_get_attempts_used(void) { return ctx.attempts_used; }
+uint8_t safe_get_attempts_remaining(void)
+{
+    return (uint8_t)(SAFE_MAX_ATTEMPTS - ctx.attempts_used);
+}

@@ -8,8 +8,6 @@
 #include "esp_err.h"
 #include "esp_timer.h"
 
-#include "seven_segment.h"
-
 typedef struct
 {
     gpio_num_t gpio_bit_0;
@@ -40,8 +38,6 @@ esp_err_t safe_indication_init(
 esp_err_t safe_indication_off(void);
 
 esp_err_t safe_indication_on(void);
-
-esp_err_t safe_indication_show_digit(uint8_t);
 
 esp_err_t safe_indication_activate_led(uint8_t index);
 

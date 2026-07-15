@@ -144,22 +144,6 @@ esp_err_t safe_indication_init(
 }
 
 
-esp_err_t safe_indication_show_digit(uint8_t digit)
-{
-    if (!initialized) {
-        return ESP_ERR_INVALID_STATE;
-    }
-
-    if (digit > 9U) {
-        return ESP_ERR_INVALID_ARG;
-    }
-
-    enabled = true;
-
-    return seven_segment_show_digit(digit);
-}
-
-
 esp_err_t safe_indication_set_led_mode(
     uint8_t index,
     safe_indication_led_mode_t mode)
