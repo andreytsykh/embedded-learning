@@ -1,8 +1,6 @@
 #include <stddef.h>
 
-#include "esp_timer.h"
-#include "esp_check.h"
-
+#include "esp_err.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -12,43 +10,69 @@
 #define LED_2 GPIO_NUM_5
 #define LED_3 GPIO_NUM_18
 
-#define LED1_MASK (1u << 0)
-#define LED2_MASK (1u << 1)
-#define LED3_MASK (1u << 2)
+#define LED_COUNT 3
+#define LED_TASK_STACK_SIZE 2048
+#define LED_TASK_PRIORITY 5
 
-static uint8_t led_state = 0;
-
-static uint32_t millis(void)
-{
-    return (uint32_t)(esp_timer_get_time() / 1000);
-}
+static led_t leds[LED_COUNT] = {
+    {
+        .pin = LED_1,
+        .interval_ms = 500,
+        .state = false,
+        .action = led_toggle
+    },
+    {
+        .pin = LED_2,
+        .interval_ms = 700,
+        .state = false,
+        .action = led_toggle
+    },
+    {
+        .pin = LED_3,
+        .interval_ms = 1100,
+        .state = false,
+        .action = led_toggle
+    }
+};
 
 void led_init(led_t *led)
 {
-    gpio_reset_pin(led->pin);
-    gpio_set_direction(
+    ESP_ERROR_CHECK(gpio_reset_pin(led->pin));
+
+    ESP_ERROR_CHECK(gpio_set_direction(
         led->pin,
-        GPIO_MODE_OUTPUT);
-    gpio_set_level(led->pin, 0);
+        GPIO_MODE_OUTPUT
+    ));
+
+    ESP_ERROR_CHECK(gpio_set_level(led->pin, 0));
 }
 
 void led_toggle(led_t *led)
 {
-    led_state ^= led->mask;
+    led->state = !led->state;
+
     gpio_set_level(
         led->pin,
-        (led_state & led->mask) != 0);
+        led->state
+    );
 }
 
-void led_update_impl(
-    led_t *led,
-    uint32_t now_ms)
+void led_task(void *arg)
 {
+    led_t *led = (led_t *)arg;
 
-    if ((now_ms - led->prev_ms) >= led->interval_ms)
-    {
+    TickType_t period =
+        pdMS_TO_TICKS(led->interval_ms);
 
-        led->prev_ms += led->interval_ms;
+    if (period == 0) {
+        abort();
+    }
+
+    TickType_t previous =
+        xTaskGetTickCount();
+
+    while (1) {
+        vTaskDelayUntil(&previous, period);
 
         led->action(led);
     }
@@ -56,50 +80,20 @@ void led_update_impl(
 
 void app_main(void)
 {
-
-    led_t leds[] = {
-        {.pin = LED_1,
-         .mask = LED1_MASK,
-         .interval_ms = 500,
-         .action = led_toggle,
-         .update = led_update_impl},
-        {.pin = LED_2,
-         .mask = LED2_MASK,
-         .interval_ms = 700,
-         .action = led_toggle,
-         .update = led_update_impl},
-        {.pin = LED_3,
-         .mask = LED3_MASK,
-         .interval_ms = 1100,
-         .action = led_toggle,
-         .update = led_update_impl}};
-
-    size_t led_count =
-        sizeof(leds) / sizeof(leds[0]);
-
-    uint32_t start_ms = millis();
-
-    for (size_t i = 0; i < led_count; i++)
-    {
-
-        leds[i].prev_ms = start_ms;
-
+    for (size_t i = 0; i < LED_COUNT; i++) {
         led_init(&leds[i]);
-    }
 
-    while (1)
-    {
+        BaseType_t result = xTaskCreate(
+            led_task,
+            "led_task",
+            LED_TASK_STACK_SIZE,
+            &leds[i],
+            LED_TASK_PRIORITY,
+            NULL
+        );
 
-        uint32_t now_ms = millis();
-
-        for (size_t i = 0; i < led_count; i++)
-        {
-
-            leds[i].update(
-                &leds[i],
-                now_ms);
+        if (result != pdPASS) {
+            abort();
         }
-
-        vTaskDelay(pdMS_TO_TICKS(1));
     }
 }
